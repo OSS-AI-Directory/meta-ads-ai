@@ -12,6 +12,7 @@ import {
   IconPhoto,
   IconDeviceLaptop,
   IconLayoutDashboard,
+  IconChartBar,
   IconLoader2,
   IconLogin,
   IconProps,
@@ -66,5 +67,6 @@ export const Icons = {
   laptop: IconDeviceLaptop,
   github: IconBrandGithub,
   twitter: IconBrandTwitter,
-  check: IconCheck
+  check: IconCheck,
+  chart: IconChartBar
 };
