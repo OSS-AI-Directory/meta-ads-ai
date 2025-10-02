@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+enum FacebookInsightLevel {
+  CAMPAIGN
+  ADSET
+  AD
+}
+
+enum SyncJobStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+model FacebookToken {
+  id                    String              @id @default(cuid())
+  userId                String
+  adAccountIds          String[]            @default([])
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String?
+  expiresAt             DateTime
+  lastValidatedAt       DateTime?
+  requiresReauth        Boolean             @default(false)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  adAccounts            FacebookAdAccount[]
+  syncJobs              SyncJob[]
+
+  @@unique([userId])
+  @@index([userId])
+}
+
+model FacebookAdAccount {
+  id                     String             @id
+  userId                 String
+  tokenId                String?
+  name                   String
+  currency               String?
+  status                 String?
+  timezoneName           String?
+  initialSyncCompletedAt DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  token                  FacebookToken?     @relation(fields: [tokenId], references: [id], onDelete: SetNull)
+  campaigns              FacebookCampaign[]
+  adSets                 FacebookAdSet[]
+  ads                    FacebookAd[]
+  insights               FacebookInsight[]
+
+  @@index([userId])
+  @@index([tokenId])
+}
+
+model FacebookCampaign {
+  id         String            @id
+  accountId  String
+  name       String
+  status     String?
+  objective  String?
+  buyingType String?
+  startTime  DateTime?
+  stopTime   DateTime?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  account    FacebookAdAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  adSets     FacebookAdSet[]
+  ads        FacebookAd[]
+
+  @@index([accountId])
+  @@index([status])
+}
+
+model FacebookAdSet {
+  id               String            @id
+  accountId        String
+  campaignId       String?
+  name             String
+  status           String?
+  optimizationGoal String?
+  dailyBudget      Decimal?          @db.Decimal(20, 4)
+  lifetimeBudget   Decimal?          @db.Decimal(20, 4)
+  startTime        DateTime?
+  endTime          DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  account          FacebookAdAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  campaign         FacebookCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  ads              FacebookAd[]
+
+  @@index([accountId])
+  @@index([campaignId])
+}
+
+model FacebookAd {
+  id         String            @id
+  accountId  String
+  campaignId String?
+  adSetId    String?
+  name       String
+  status     String?
+  creativeId String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  account    FacebookAdAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  campaign   FacebookCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  adSet      FacebookAdSet?    @relation(fields: [adSetId], references: [id], onDelete: SetNull)
+
+  @@index([accountId])
+  @@index([campaignId])
+  @@index([adSetId])
+}
+
+model FacebookInsight {
+  accountId     String
+  entityId      String
+  level         FacebookInsightLevel
+  date          DateTime
+  spend         Decimal              @default(0) @db.Decimal(20, 4)
+  impressions   BigInt               @default(0)
+  clicks        BigInt               @default(0)
+  cpa           Decimal?             @db.Decimal(20, 4)
+  roas          Decimal?             @db.Decimal(20, 4)
+  purchaseValue Decimal?             @db.Decimal(20, 4)
+  currency      String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  account       FacebookAdAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@id([accountId, entityId, level, date])
+  @@index([entityId])
+  @@index([accountId, date])
+}
+
+model SyncJob {
+  id           String         @id @default(cuid())
+  userId       String
+  tokenId      String?
+  status       SyncJobStatus  @default(PENDING)
+  errorPayload Json?
+  startedAt    DateTime       @default(now())
+  finishedAt   DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  token        FacebookToken? @relation(fields: [tokenId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([tokenId])
+}
