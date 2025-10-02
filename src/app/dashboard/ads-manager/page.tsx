@@ -13,10 +13,10 @@ import {
 } from '@/lib/prisma/repositories/facebook';
 
 interface PageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     accountId?: string;
     tab?: string;
-  };
+  }>;
 }
 
 function decimalToNumber(value?: { toString(): string } | null) {
@@ -42,13 +42,14 @@ export default async function AdsManagerPage({ searchParams }: PageProps) {
 
   const accounts = await getAdAccountsByUser(userId);
 
-  const requestedAccountId = searchParams?.accountId;
+  const params = await searchParams;
+  const requestedAccountId = params?.accountId;
   const selectedAccount =
     accounts.find((account) => account.id === requestedAccountId) ??
     accounts[0];
   const selectedAccountId = selectedAccount?.id;
 
-  const requestedTab = searchParams?.tab as
+  const requestedTab = params?.tab as
     | 'campaigns'
     | 'adsets'
     | 'ads'
